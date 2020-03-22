@@ -11,27 +11,26 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, sessionmaker
 import os
+from datetime import date 
+
 
 USER = os.environ["dbName"]
 PASSWORD = os.environ["dbPass"]
 
 Base = declarative_base()
 
-
 class Game(Base):
     __tablename__ = "games"
 
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
-    team_stat_id = Column(Integer, ForeignKey("team_stats.id"))
     team_stats = relationship(
-        "TeamStat", back_populates="team_stats", cascade="save-update"
+        "TeamStat", back_populates="game", cascade="save-update"
     )
-    player_stat_id = Column(Integer, ForeignKey("player_stats.id"))
     player_stats = relationship(
-        "PlayerStat", back_populates="player_stats", cascade="save-update"
+        "PlayerStat", back_populates="game", cascade="save-update"
     )
 
 
@@ -42,10 +41,8 @@ class Team(Base):
     location = Column(String, nullable=False)
     name = Column(String, nullable=False)
     abbr = Column(String, nullable=False)
-    game_stats_id = Column(Integer, ForeignKey("team_stats.id"))
-    game_stats = relationship("TeamStat", back_populates="team_stats")
-    player_stats_id = Column(Integer, ForeignKey("player_stats.id"))
-    player_stats = relationship("PlayerStat", back_populates="player_stats")
+    game_stats = relationship("TeamStat", back_populates="team")
+    player_stats = relationship("PlayerStat")
 
 
 class Player(Base):
@@ -58,8 +55,7 @@ class Player(Base):
     draft_yr = Column(Integer)
     draft_rd = Column(Integer)
     draft_pk = Column(Integer)
-    stats_id = Column(Integer, ForeignKey("player_stats.id"))
-    stats = relationship("PlayerStat", back_populates="player_stats")
+    stats = relationship("PlayerStat", back_populates="player")
 
 
 class PlayerStat(Base):
@@ -67,11 +63,11 @@ class PlayerStat(Base):
 
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey("players.id"))
-    player = relationship("Player", back_populates="players", cascade="save-update")
+    player = relationship("Player", back_populates="stats", cascade="save-update")
     game_id = Column(Integer, ForeignKey("games.id"))
-    game = relationship("Game", back_populates="games")
+    game = relationship("Game", back_populates="player_stats")
     team_id = Column(Integer, ForeignKey("teams.id"))
-    team = relationship("Team", back_populates="teams")
+    team = relationship("Team", back_populates="player_stats")
     minutes = Column(Integer)
     points = Column(Integer)
     drebs = Column(Integer)
@@ -98,9 +94,9 @@ class TeamStat(Base):
 
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("games.id"))
-    game = relationship("Game", back_populates="games")
+    game = relationship("Game", back_populates="team_stats")
     team_id = Column(Integer, ForeignKey("teams.id"))
-    team = relationship("Team", back_populates="teams", cascade="save-update")
+    team = relationship("Team", back_populates="game_stats", cascade="save-update")
     home = Column(Boolean)
     points = Column(Integer)
     drebs = Column(Integer)
@@ -120,11 +116,19 @@ class TeamStat(Base):
     fouls = Column(Integer)
 
 
-def main():
-    engine = create_engine(
-        f"postgresql://{USER}:{PASSWORD}@localhost:5432/nba_stats", echo=True
-    )
-    Base.metadata.create_all(engine)
+class nbaDB:
+    def __init__(self, user, password):
+        self.engine = create_engine(
+            f"postgresql://{USER}:{PASSWORD}@localhost:5432/nba_stats", echo=True
+        )
+        Sess = sessionmaker(bind=self.engine)
+        self.session= Sess()
 
 
-main()
+    def map_game(self, data:dict):
+        pass
+
+    def commit_game(self):
+        pass 
+
+
