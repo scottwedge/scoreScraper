@@ -13,7 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 import os
-from datetime import date 
+from datetime import date
 
 
 USER = os.environ["dbName"]
@@ -21,14 +21,20 @@ PASSWORD = os.environ["dbPass"]
 
 Base = declarative_base()
 
+
 class Game(Base):
     __tablename__ = "games"
 
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
-    team_stats = relationship(
-        "TeamStat", back_populates="game", cascade="save-update"
-    )
+    regular_season = Column(Boolean)
+    home_wins = Column(Integer)
+    home_losses = Column(Integer)
+    away_wins = Column(Integer)
+    away_losses = Column(Integer)
+    over_under = Column(Integer)
+    spread = Column(String)
+    team_stats = relationship("TeamStat", back_populates="game", cascade="save-update")
     player_stats = relationship(
         "PlayerStat", back_populates="game", cascade="save-update"
     )
@@ -122,13 +128,10 @@ class nbaDB:
             f"postgresql://{USER}:{PASSWORD}@localhost:5432/nba_stats", echo=True
         )
         Sess = sessionmaker(bind=self.engine)
-        self.session= Sess()
+        self.session = Sess()
 
-
-    def map_game(self, data:dict):
+    def map_game(self, data: dict):
         pass
 
     def commit_game(self):
-        pass 
-
-
+        pass
