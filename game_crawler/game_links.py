@@ -7,11 +7,13 @@ from calendar import monthrange
 import logging
 
 
-'''
+"""
 GameDriver is a class that uses selenium webdrivers to get a list of
 games from ESPN given a range of dates.
 
-'''
+"""
+
+
 class GameDriver:
     def __init__(self, url, season_start, season_end, options):
         self.driver = webdriver.Firefox(options=options)
