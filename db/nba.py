@@ -50,6 +50,31 @@ class Team(Base):
     game_stats = relationship("TeamStat", back_populates="team")
     player_stats = relationship("PlayerStat")
 
+class TeamStat(Base):
+    __tablename__ = "team_stats"
+
+    id = Column(Integer, primary_key=True)
+    game_id = Column(Integer, ForeignKey("games.id"))
+    game = relationship("Game", back_populates="team_stats")
+    team_id = Column(Integer, ForeignKey("teams.id"))
+    team = relationship("Team", back_populates="game_stats", cascade="save-update")
+    home = Column(Boolean)
+    points = Column(Integer)
+    drebs = Column(Integer)
+    orebs = Column(Integer)
+    assists = Column(Integer)
+    turnovers = Column(Integer)
+    fgm = Column(Integer)
+    fga = Column(Integer)
+    fg_per = Column(Float)
+    ftm = Column(Integer)
+    fta = Column(Integer)
+    ft_per = Column(Float)
+    x3pm = Column(Integer)
+    x3pa = Column(Integer)
+    x3p_per = Column(Float)
+    steals = Column(Integer)
+    fouls = Column(Integer)
 
 class Player(Base):
     __tablename__ = "players"
@@ -94,32 +119,6 @@ class PlayerStat(Base):
     fouls = Column(Integer)
     plus_minus = Column(Integer)
 
-
-class TeamStat(Base):
-    __tablename__ = "team_stats"
-
-    id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey("games.id"))
-    game = relationship("Game", back_populates="team_stats")
-    team_id = Column(Integer, ForeignKey("teams.id"))
-    team = relationship("Team", back_populates="game_stats", cascade="save-update")
-    home = Column(Boolean)
-    points = Column(Integer)
-    drebs = Column(Integer)
-    orebs = Column(Integer)
-    assists = Column(Integer)
-    turnovers = Column(Integer)
-    fgm = Column(Integer)
-    fga = Column(Integer)
-    fg_per = Column(Float)
-    ftm = Column(Integer)
-    fta = Column(Integer)
-    ft_per = Column(Float)
-    x3pm = Column(Integer)
-    x3pa = Column(Integer)
-    x3p_per = Column(Float)
-    steals = Column(Integer)
-    fouls = Column(Integer)
 
 
 class nbaDB:
