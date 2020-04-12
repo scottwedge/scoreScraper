@@ -6,14 +6,6 @@ import re
 GAMEID = 401071116
 
 
-def get_urls(game_id: int):
-    return {
-        "gamecast": f"https://www.espn.com/nba/game?gameId={game_id}",
-        "boxscore": f"https://www.espn.com/nba/boxscore?gameId={game_id}",
-        "matchup": f"https://www.espn.com/nba/matchup?gameId={game_id}",
-    }
-
-
 class Record:
     def __init__(self, wins: int, losses: int):
         self.wins = wins
@@ -99,9 +91,17 @@ class NBASpider(scrapy.Spider):
         super(NBASpider, self).__init__(*args, **kwargs)
         self.game_ids = ids
 
+    @staticmethod
+    def get_urls(game_id: int):
+        return {
+            "gamecast": f"https://www.espn.com/nba/game?gameId={game_id}",
+            "boxscore": f"https://www.espn.com/nba/boxscore?gameId={game_id}",
+            "matchup": f"https://www.espn.com/nba/matchup?gameId={game_id}",
+        }
+
     def start_requests(self):
         for g in self.game_ids:
-            urls = get_urls(g)
+            urls = self.get_urls(g)
 
             yield scrapy.Request(
                 url=urls["gamecast"],
@@ -170,12 +170,12 @@ class NBASpider(scrapy.Spider):
         pass
 
     def parse_boxscore(self, response, game_id):
-        home_team_stats = self.new_players(
+        home_team_stats = self.new_player_stats(
             response.xpath(
                 '//div[@class="col column-two gamepackage-home-wrap"]//tbody//tr'
             ).getall()
         )
-        away_team_stats = self.new_players(
+        away_team_stats = self.new_player_stats(
             response.xpath(
                 '//div[@class="col column-one gamepackage-away-wrap"]//tbody//tr'
             ).getall()
@@ -188,7 +188,7 @@ class NBASpider(scrapy.Spider):
         }
 
     @staticmethod
-    def new_players(boxscore: List[str]) -> List[PlayerStats]:
+    def new_player_stats(boxscore: List[str]) -> List[PlayerStats]:
         name_re = r"id/(?P<pid>[0-9]+)/(?P<first>[a-z]+)-(?P<last>[a-z]+).*position\">(?P<pos>[A-Z]{1,2})"
         dnp_re = r"DNP"
 
