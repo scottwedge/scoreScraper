@@ -1,7 +1,9 @@
 import scrapy
 from scrapy.crawler import CrawlerProcess
-from typing import List
+from scrapy.utils.project import get_project_settings
+from typing import List, Dict
 import re
+
 
 GAMEID = 401071116
 
@@ -14,8 +16,6 @@ class Game(scrapy.Item):
     away_record = scrapy.Field()
     away_away_record = scrapy.Field()
     line = scrapy.Field()
-    team_stats = scrapy.Field()
-    player_stats = scrapy.Field()
 
 
 class Record(scrapy.Item):
@@ -38,6 +38,7 @@ class Team(scrapy.Item):
 class TeamStats(scrapy.Item):
     team = scrapy.Field()
     game_id = scrapy.Field()
+    home = scrapy.Field()
     fgm = scrapy.Field()
     fga = scrapy.Field()
     fg_per = scrapy.Field()
@@ -60,6 +61,7 @@ class TeamStats(scrapy.Item):
     pf = scrapy.Field()
     technical = scrapy.Field()
     flagrant = scrapy.Field()
+    largest_lead = scrapy.Field()
     pts = scrapy.Field()
 
 
@@ -73,6 +75,7 @@ class Player(scrapy.Item):
 class PlayerStats(scrapy.Item):
     player = scrapy.Field()
     game_id = scrapy.Field()
+    home = scrapy.Field()
     min = scrapy.Field()
     fgm = scrapy.Field()
     fga = scrapy.Field()
@@ -95,112 +98,6 @@ class PlayerStats(scrapy.Item):
     pts = scrapy.Field()
 
 
-# class Record:
-#     def __init__(self, wins: int, losses: int):
-#         self.wins = wins
-#         self.losses = losses
-
-
-# class Line:
-#     def __init__(self, favorite: str = None, line: int = 0, ou: int = 0):
-#         self.favorite = favorite
-#         self.line = line
-#         self.ou = ou
-
-
-# class Game:
-#     def __init__(self, **kwargs):
-#         allowed_keys = set(
-#             [
-#                 "date",
-#                 "home_record",
-#                 "home_home_record",
-#                 "away_record",
-#                 "away_away_record",
-#                 "line",
-#             ]
-#         )
-#         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
-
-
-# class Team:
-#     def __init__(self, **kwargs):
-#         allowed_keys = set(["location", "name", "abbreviation",])
-#         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
-
-
-# class TeamStats:
-#     def __init(self, **kwargs):
-#         default_attr = dict(
-#             team=None,
-#             game_id=None,
-#             fgm=0,
-#             fga=0,
-#             fg_per=0,
-#             x3pa=0,
-#             x3pm=0,
-#             x3p_per=0,
-#             fta=0,
-#             ftm=0,
-#             ft_per=0,
-#             oreb=0,
-#             dreb=0,
-#             reb=0,
-#             ast=0,
-#             stl=0,
-#             blk=0,
-#             to=0,
-#             pf=0,
-#             pts=0,
-#         )
-
-#         default_attr.update(kwargs)
-#         allowed_attr = list(default_attr.keys())
-#         self.__dict__.update(
-#             (k, v) for k, v in default_attr.items() if k in allowed_attr
-#         )
-
-
-# class Player:
-#     def __init__(self, **kwargs):
-#         allowed_keys = set(["player_id", "first_name", "last_name", "position"])
-#         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
-
-
-# class PlayerStats:
-#     def __init__(self, **kwargs):
-#         default_attr = dict(
-#             player=None,
-#             game_id=None,
-#             min=0,
-#             fgm=0,
-#             fga=0,
-#             fg_per=0,
-#             x3pa=0,
-#             x3pm=0,
-#             x3p_per=0,
-#             fta=0,
-#             ftm=0,
-#             ft_per=0,
-#             oreb=0,
-#             dreb=0,
-#             reb=0,
-#             ast=0,
-#             stl=0,
-#             blk=0,
-#             to=0,
-#             pf=0,
-#             plusminus=0,
-#             pts=0,
-#         )
-
-#         default_attr.update(kwargs)
-#         allowed_attr = list(default_attr.keys())
-#         self.__dict__.update(
-#             (k, v) for k, v in default_attr.items() if k in allowed_attr
-#         )
-
-
 class NBASpider(scrapy.Spider):
     name = "nba_boxscores"
 
@@ -213,31 +110,26 @@ class NBASpider(scrapy.Spider):
         return {
             "gamecast": f"https://www.espn.com/nba/game?gameId={game_id}",
             "boxscore": f"https://www.espn.com/nba/boxscore?gameId={game_id}",
-            "matchup": f"https://www.espn.com/nba/matchup?gameId={game_id}",
+            "teamstats": f"https://www.espn.com/nba/matchup?gameId={game_id}",
         }
 
     def start_requests(self):
         for g in self.game_ids:
             urls = self.get_urls(g)
-            item = Game()
-            item["game_id"] = g
             yield scrapy.Request(
                 url=urls["gamecast"],
                 callback=self.parse_game,
                 cb_kwargs=dict(game_id=g),
-                meta={"item": item},
             )
             yield scrapy.Request(
                 url=urls["boxscore"],
                 callback=self.parse_boxscore,
                 cb_kwargs=dict(game_id=g),
-                meta={"item": item},
             )
             yield scrapy.Request(
-                url=urls["matchup"],
-                callback=self.parse_matchup,
+                url=urls["teamstats"],
+                callback=self.parse_teamstats,
                 cb_kwargs=dict(game_id=g),
-                meta={"item": item},
             )
 
     # Parses game information located in the gamecast tab of a game ESPN recorded
@@ -276,42 +168,147 @@ class NBASpider(scrapy.Spider):
         bet_info = response.xpath('//div[@class="odds-details"]//li').getall()
         game_line = self.new_line(bet_info) if bet_info else Line()
 
-        item = response.meta["item"]
-        item["date"] = game_time
-        item["home_record"] = dict(home_record)
-        item["home_home_record"] = dict(home_home_record)
-        item["away_record"] = dict(away_record)
-        item["away_away_record"] = dict(away_away_record)
-        item["line"] = dict(game_line)
+        game = Game(game_id=game_id)
+        game["date"] = game_time
+        game["home_record"] = dict(home_record)
+        game["home_home_record"] = dict(home_home_record)
+        game["away_record"] = dict(away_record)
+        game["away_away_record"] = dict(away_away_record)
+        game["line"] = dict(game_line)
+        return {"type": "game", "data": dict(game)}
 
     # parse_matchup parses the nba matchup tab and returns team summary statistics
-    def parse_matchup(self, response, game_id):
-        pass
+    def parse_teamstats(self, response, game_id):
+        away_team = self.new_team(
+            response.xpath('//div[@class="team away"]//a[@class="team-name"]').get()
+        )
+        home_team = self.new_team(
+            response.xpath('//div[@class="team home"]//a[@class="team-name"]').get()
+        )
+        away_score = response.xpath(
+            '//div[@class="team away"]//div[@class="score-container"]'
+        ).re_first(r"[0-9]{2,3}")
+        home_score = response.xpath(
+            '//div[@class="team home"]//div[@class="score-container"]'
+        ).re_first(r"[0-9]{2,3}")
+
+        team_stat_strings = response.xpath("//tr[@data-stat-attr]").getall()
+
+        away_team_stat = TeamStats(
+            team=dict(away_team), game_id=game_id, pts=away_score, home=False
+        )
+        home_team_stat = TeamStats(
+            team=dict(home_team), game_id=game_id, pts=home_score, home=True
+        )
+
+        stats_dict = self.new_team_stats(team_stat_strings)
+
+        for k, v in stats_dict["home"].items():
+            home_team_stat[k] = v
+        for k, v in stats_dict["away"].items():
+            away_team_stat[k] = v
+
+        team_stats = dict()
+        team_stats["home_stats"] = dict(home_team_stat)
+        team_stats["away_stats"] = dict(away_team_stat)
+        return {"type": "team_stats", "data": team_stats}
 
     # parse_boxscore parses the nba boxscore html page and returns lists of player stats.
-    def parse_boxscore(self, response, game_id):
+    def parse_boxscore(self, response, game_id: str):
         home_team_stats = self.new_player_stats(
             game_id,
             response.xpath(
                 '//div[@class="col column-two gamepackage-home-wrap"]//tbody//tr'
             ).getall(),
+            True,
         )
         away_team_stats = self.new_player_stats(
             game_id,
             response.xpath(
                 '//div[@class="col column-one gamepackage-away-wrap"]//tbody//tr'
             ).getall(),
+            False,
         )
-        item = response.meta["item"]
-        item["player_stats"] = {
-            "home": home_team_stats,
-            "away": away_team_stats,
+        player_stats = dict()
+        player_stats["home_stats"] = home_team_stats
+        player_stats["away_stats"] = away_team_stats
+        return {"type": "player_stats", "data": player_stats}
+
+    def new_team_stats(self, team_stat: List[str]) -> Dict:
+        stat_map = {
+            "fieldGoalsMade": "fgm",
+            "fieldGoalsAttempted": "fga",
+            "fieldGoalPct": "fg_per",
+            "threePointFieldGoalsMade": "x3pm",
+            "threePointFieldGoalsAttempted": "x3pa",
+            "threePointFieldGoalPct": "x3p_per",
+            "freeThrowsMade": "ftm",
+            "freeThrowsAttempted": "fta",
+            "freeThrowPct": "ft_per",
+            "totalRebounds": "reb",
+            "offensiveRebounds": "oreb",
+            "defensiveRebounds": "dreb",
+            "assists": "ast",
+            "steals": "stl",
+            "blocks": "blk",
+            "totalTurnovers": "to",
+            "turnoverPoints": "pts_off_to",
+            "fastBreakPoints": "fast_break_pts",
+            "pointsInPaint": "points_in_paint",
+            "fouls": "pf",
+            "technicalFouls": "technical",
+            "flagrantFouls": "flagrant",
+            "largestLead": "largest_lead",
         }
+
+        shot_list = [
+            "fieldGoalsMade-fieldGoalsAttempted",
+            "threePointFieldGoalsMade-threePointFieldGoalsAttempted",
+            "freeThrowsMade-freeThrowsAttempted",
+        ]
+
+        stat_re = r"data-stat-attr.*\"(?P<stat>[a-zA-Z-]*)\".*>(?P<away>[0-9-]+).*>(?P<home>[0-9-]+)"
+
+        combined_stat_dict = {"home": dict(), "away": dict()}
+        for s in team_stat:
+            # remove whitespace characters so regex works
+            s = re.sub(r"[\s]", "", s)
+            stats = re.search(stat_re, s)
+
+            if stats.group("stat") in shot_list:
+                stat_made, stat_attempt = self.split_stat_name(stats.group("stat"))
+                home_made_val, home_att_val = self.split_shots(stats.group("home"))
+                away_made_val, away_att_val = self.split_shots(stats.group("away"))
+                mapped_stat_made = stat_map.get(stat_made)
+                mapped_stat_att = stat_map.get(stat_attempt)
+                combined_stat_dict["home"][mapped_stat_made] = home_made_val
+                combined_stat_dict["home"][mapped_stat_att] = home_att_val
+                combined_stat_dict["away"][mapped_stat_made] = away_made_val
+                combined_stat_dict["away"][mapped_stat_att] = away_att_val
+
+            else:
+                mapped_stat = stat_map.get(stats.group("stat"))
+                combined_stat_dict["home"][mapped_stat] = stats.group("home")
+                combined_stat_dict["away"][mapped_stat] = stats.group("away")
+
+        return combined_stat_dict
+
+    @staticmethod
+    def split_stat_name(stat: str) -> tuple:
+        s = stat.split("-")
+        return (s[0], s[1])
+
+    @staticmethod
+    def split_shots(shots: str) -> tuple:
+        s = shots.split("-")
+        return (s[0], s[1])
 
     # new_player_stats parses the boxscore html table and returns player stats corresponding
     # to each row in the table
     @staticmethod
-    def new_player_stats(game_id: int, boxscore: List[str]) -> List[PlayerStats]:
+    def new_player_stats(
+        game_id: int, boxscore: List[str], home: bool
+    ) -> List[PlayerStats]:
         name_re = r"id/(?P<pid>[0-9]+)/(?P<first>[a-z]+)-(?P<last>[a-z]+).*position\">(?P<pos>[A-Z]{1,2})"
 
         players = list()
@@ -396,8 +393,9 @@ class NBASpider(scrapy.Spider):
                     r"\"plusminus\">([0-9-+]{1,3})", line
                 ).group(1)
 
+            ps = PlayerStats(home=home)
 
-            ps = PlayerStats()
+            # work through stats and set default value if stat not found
             for k in fields:
                 if k not in ["player", "game_id"]:
                     ps[k] = p_stat_kwargs.get(k, 0)
@@ -432,7 +430,14 @@ class NBASpider(scrapy.Spider):
         )
 
 
-process = CrawlerProcess(settings={"COOKIES_ENABLED": False, "DOWNLOAD_DELAY": 2,})
+if __name__ == "__main__":
+    print(__name__)
+    settings = get_project_settings()
+    settings["COOKIES_ENABLED"] = False
+    settings["DOWNLOAD_DELAY"] = 1
+    settings["ITEM_PIPELINES"] = {"pipelines.JsonWriterPipeline": 100}
 
-process.crawl(NBASpider, ids=["401071116"])
-process.start()
+    process = CrawlerProcess(settings)
+
+    process.crawl(NBASpider, ids=["401071116"])
+    process.start()
