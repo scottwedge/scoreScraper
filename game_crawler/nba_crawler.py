@@ -75,7 +75,6 @@ class Player(scrapy.Item):
 class PlayerStats(scrapy.Item):
     player = scrapy.Field()
     game_id = scrapy.Field()
-    home = scrapy.Field()
     min = scrapy.Field()
     fgm = scrapy.Field()
     fga = scrapy.Field()
@@ -175,7 +174,7 @@ class NBASpider(scrapy.Spider):
         game["away_record"] = dict(away_record)
         game["away_away_record"] = dict(away_away_record)
         game["line"] = dict(game_line)
-        return {"type": "game", "data": dict(game)}
+        return {"type": "game", "game_id": game_id, "data": dict(game)}
 
     # parse_matchup parses the nba matchup tab and returns team summary statistics
     def parse_teamstats(self, response, game_id):
@@ -211,7 +210,7 @@ class NBASpider(scrapy.Spider):
         team_stats = dict()
         team_stats["home_stats"] = dict(home_team_stat)
         team_stats["away_stats"] = dict(away_team_stat)
-        return {"type": "team_stats", "data": team_stats}
+        return {"type": "team_stats", "game_id": game_id, "data": team_stats}
 
     # parse_boxscore parses the nba boxscore html page and returns lists of player stats.
     def parse_boxscore(self, response, game_id: str):
@@ -220,19 +219,17 @@ class NBASpider(scrapy.Spider):
             response.xpath(
                 '//div[@class="col column-two gamepackage-home-wrap"]//tbody//tr'
             ).getall(),
-            True,
         )
         away_team_stats = self.new_player_stats(
             game_id,
             response.xpath(
                 '//div[@class="col column-one gamepackage-away-wrap"]//tbody//tr'
             ).getall(),
-            False,
         )
         player_stats = dict()
         player_stats["home_stats"] = home_team_stats
         player_stats["away_stats"] = away_team_stats
-        return {"type": "player_stats", "data": player_stats}
+        return {"type": "player_stats", "game_id": game_id, "data": player_stats}
 
     def new_team_stats(self, team_stat: List[str]) -> Dict:
         stat_map = {
@@ -306,9 +303,7 @@ class NBASpider(scrapy.Spider):
     # new_player_stats parses the boxscore html table and returns player stats corresponding
     # to each row in the table
     @staticmethod
-    def new_player_stats(
-        game_id: int, boxscore: List[str], home: bool
-    ) -> List[PlayerStats]:
+    def new_player_stats(game_id: int, boxscore: List[str]) -> List[PlayerStats]:
         name_re = r"id/(?P<pid>[0-9]+)/(?P<first>[a-z]+)-(?P<last>[a-z]+).*position\">(?P<pos>[A-Z]{1,2})"
 
         players = list()
@@ -390,10 +385,10 @@ class NBASpider(scrapy.Spider):
                     r"\"pf\">{0,1}([0-9]{1,3})", line
                 ).group(1)
                 p_stat_kwargs["plusminus"] = re.search(
-                    r"\"plusminus\">([0-9-+]{1,3})", line
+                    r"\"plusminus\">\+{0,1}([0-9-]{1,3})", line
                 ).group(1)
 
-            ps = PlayerStats(home=home)
+            ps = PlayerStats()
 
             # work through stats and set default value if stat not found
             for k in fields:
@@ -428,16 +423,3 @@ class NBASpider(scrapy.Spider):
         return Line(
             favorite=line_split[0], spread=float(line_split[1]), ou=int(ou.group(0))
         )
-
-
-if __name__ == "__main__":
-    print(__name__)
-    settings = get_project_settings()
-    settings["COOKIES_ENABLED"] = False
-    settings["DOWNLOAD_DELAY"] = 1
-    settings["ITEM_PIPELINES"] = {"pipelines.JsonWriterPipeline": 100}
-
-    process = CrawlerProcess(settings)
-
-    process.crawl(NBASpider, ids=["401071116"])
-    process.start()

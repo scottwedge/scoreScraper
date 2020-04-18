@@ -1,6 +1,7 @@
 import dataclasses
 from datetime import datetime
 
+
 @dataclass
 class Seasons:
     season_info = {
@@ -8,7 +9,6 @@ class Seasons:
             "regular_season_start": datetime(),
             "regular_season_end": datetime(),
             "post_season_start": datetime(),
-            "post_season_end"
+            "post_season_end": "",
         }
     }
-
