@@ -140,8 +140,9 @@ class nbaDB:
         Sess = sessionmaker(bind=self.engine)
         self.session = Sess()
 
-    def add_record(self, record):
-        pass
+    def add_record(self, record: dict):
+        g = self.map_to_db(record)
+        self.session.add_record(g)
 
     def map_to_db(self, item):
         game_data = item.get("game")

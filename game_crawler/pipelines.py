@@ -14,8 +14,7 @@ class DBWriterPipeline(object):
         self.db = nba.nbaDB(USER, PASSWORD)
 
     def close_spider(self, spider):
-        # self.file.close()
-        pass
+        self.db.session.close()
 
     def process_item(self, item, spider):
         return item
