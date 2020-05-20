@@ -1,83 +1,84 @@
 from selenium import webdriver
-from selenium.webdriver import DesiredCapabilities
+from selenium.webdriver import DesiredCapabilities, FirefoxProfile
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import TimeoutException
 from datetime import datetime, timedelta
 from typing import List
+from itertools import chain
+import re
+import json
 from calendar import monthrange
-import logging
+from datetime import datetime
+
+from nba_seasons import Seasons
 
 
 """
 GameDriver is a class that uses selenium webdrivers to get a list of
 games from ESPN given a range of dates.
-
 """
 
 
 class GameDriver:
-    def __init__(self, url, season_start, season_end, options):
+    def __init__(self, url, options):
         self.driver = webdriver.Firefox(options=options)
+        self.driver.set_page_load_timeout(30)
         self.base_url = url
-        self.start = season_start
-        self.end = season_end
 
     def get_games_daterange(self, start: datetime, end: datetime) -> List[str]:
         if start > end:
             raise ValueError("start date cannot be later than end date")
-        game_links = []
+        game_links = list()
         d = self._get_dates(start, end)
-        d = self._trim_dates(d)
         for date in d:
-            logging.debug(f"getting game urls for {date}")
-            game_links.extend(self._get_games_url(self._date_to_url))
-
-    def get_games_seasons(self, start: int, end: int) -> List[str]:
-        game_links = []
-        for i in range((end - start) + 1):
-            dates = self._season_to_dates(start + i)
-        for d in dates:
-            logging.debug(f"getting game urls for {d}")
-            game_links.extend(self._get_games_url(self._date_to_url(d)))
+            print(f"getting game urls for {date}")
+            game_links.extend(self._get_games_url(date))
         return game_links
 
     def _date_to_url(self, d: datetime) -> str:
         return f"{self.base_url}{d.year}{d.month :02d}{d.day :02d}"
 
-    def _get_games_url(self, url: str) -> List[str]:
-        self.driver.get(url)
+    def _get_games_url(self, date: str) -> List[str]:
+        retry = 0
+        t = datetime.now()
+        u = self._date_to_url(date)
+        while retry < 3:
+            try:
+                self.driver.get(u)
+                retry = 3
+            except TimeoutException:
+                    print("timed out, retrying")
+                    retry += 1
+            except Exception as e:
+                print(e)
+                retry = 3
+                
         l = self.driver.find_elements_by_xpath('//a[@class="mobileScoreboardLink"]')
-        out = [i.get_attribute("href") for i in l]
-        d = url.split("/")[-1]
-        logging.debug(f"found {len(out)} games on {d}")
-        return out
+        out = [re.findall(r'gameId=([0-9]+)', i.get_attribute("href")) for i in l]
+        print(f"found {len(out)} games on {date} - call took {(datetime.now() - t).seconds} seconds")
+        return list(chain.from_iterable(out))
 
     @staticmethod
     def _get_dates(start: datetime, end: datetime) -> List[datetime]:
         d = (end + timedelta(days=1) - start).days
         return [start + timedelta(days=i) for i in range(d)]
 
-    def _season_to_dates(self, season) -> List[datetime]:
-        start = datetime(season, self.start, 1)
-        if self.start < self.end:
-            end = datetime(season, self.end, monthrange(season, self.end)[1])
-        else:
-            end = datetime(season + 1, self.end, monthrange(season + 1, self.end)[1])
-        return self._get_dates(start, end)
 
-    def _trim_dates(self, dates: List[datetime]) -> List[datetime]:
-        if self.end < self.start:
-            return [d for d in dates if d.month < self.end or d.month > self.start]
-        else:
-            return [d for d in dates if d.month < self.end and d.month > self.start]
-
-
-options = Options()
-options.headless = True
-u = "https://www.espn.com/nba/scoreboard/_/date/"
-a = GameDriver(u, 10, 4, options)
-
-try:
-    a.get_games_seasons(2016, 2017)
-except Exception:
-    print("failed")
-    a.driver.close()
+if __name__ == "__main__":
+    game_id_dict = {}
+    options = Options()
+    options.headless = True
+    u = "https://www.espn.com/nba/scoreboard/_/date/"
+    g_driver = GameDriver(u, options)
+    for k in Seasons.season_info.keys():
+        game_id_dict[k] = dict()
+        try: 
+            game_id_dict[k]["regular_season"] = g_driver.get_games_daterange(Seasons.season_info[k].get("regular_season_start"), Seasons.season_info[k].get("regular_season_end"))
+            game_id_dict[k]["post_season"] = g_driver.get_games_daterange(Seasons.season_info[k].get("post_season_start"), Seasons.season_info[k].get("post_season_end"))
+        except Exception as e:
+            print(e)
+            print(f"failed to get game_ids for season {k}")
+    g_driver.driver.close()
+    with open('game_ids.json', 'w') as f:
+        json.dump(game_id_dict, f)
+    print("wrote game ids to file")
