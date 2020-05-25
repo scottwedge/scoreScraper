@@ -57,7 +57,7 @@ class TeamStat(Base):
     id = Column(Integer, primary_key=True)
     game_id = Column(Integer, ForeignKey("games.id"))
     game = relationship("Game", back_populates="team_stats")
-    team_id = Column(Integer, ForeignKey("teams.id"))
+    team_abbr = Column(String, ForeignKey("teams.abbr"))
     team = relationship("Team", back_populates="game_stats", cascade="save-update")
     home = Column(Boolean)
     fgm = Column(Integer)
@@ -109,7 +109,7 @@ class PlayerStat(Base):
     player = relationship("Player", back_populates="stats", cascade="save-update")
     game_id = Column(Integer, ForeignKey("games.id"))
     game = relationship("Game", back_populates="player_stats")
-    team_id = Column(Integer, ForeignKey("teams.id"))
+    team_abbr = Column(String, ForeignKey("teams.abbr"))
     team = relationship("Team", back_populates="player_stats")
     minutes = Column(Integer)
     points = Column(Integer)
@@ -142,9 +142,9 @@ class nbaDB:
 
     def add_record(self, record: dict):
         g = self.map_to_db(record)
-        self.session.add_record(g)
+        self.session.add(g)
 
-    def map_to_db(self, item):
+    def map_to_db(self, item: dict) -> Game:
         game_data = item.get("game")
         player_data = item.get("player_stats")
         team_data = item.get("team_stats")
@@ -157,8 +157,8 @@ class nbaDB:
             home_home_losses=game_data.get("home_home_record", {}).get("losses", ""),
             away_wins=game_data.get("away_record", {}).get("wins", ""),
             away_losses=game_data.get("away_record", {}).get("losses", ""),
-            away_home_wins=game_data.get("away_away_record", {}).get("wins", ""),
-            away_home_losses=game_data.get("away_away_record", {}).get("losses", ""),
+            away_away_wins=game_data.get("away_away_record", {}).get("wins", ""),
+            away_away_losses=game_data.get("away_away_record", {}).get("losses", ""),
             over_under=game_data.get("line", {}).get("ou", ""),
             favorite=game_data.get("line", {}).get("favorite", ""),
             spread=game_data.get("line", {}).get("spread", ""),
@@ -179,13 +179,13 @@ class nbaDB:
         for k in player_data.keys():
             for ps in player_data[k]:
                 stat = PlayerStat(
-                    player_id=ps.get("player", "")["id"],
+                    player_id=ps.get("player", "")["player_id"],
                     game_id=ps.get("game_id", ""),
-                    team_id=home_pk,
+                    team_abbr=home_pk,
                     minutes=ps.get("min", ""),
                     points=ps.get("pts", ""),
-                    drebs=ps.get("drebs", ""),
-                    orebs=ps.get("orebs", ""),
+                    drebs=ps.get("dreb", ""),
+                    orebs=ps.get("oreb", ""),
                     rebounds=ps.get("reb", ""),
                     assists=ps.get("ast", ""),
                     turnovers=ps.get("to", ""),
@@ -205,7 +205,7 @@ class nbaDB:
                         id=ps.get("player", {}).get("player_id", ""),
                         first_name=ps.get("player", {}).get("first_name", ""),
                         last_name=ps.get("player", {}).get("last_name", ""),
-                        pos=ps.get("player", {}).get("position", ""),
+                        position=ps.get("player", {}).get("position", ""),
                     ),
                 )
                 player_db_list.append(stat)
@@ -218,7 +218,7 @@ class nbaDB:
             team = team_data[k]
             team_stat = TeamStat(
                 game_id=team.get("game_id", ""),
-                team_id=team.get("team", {}).get("abbreviation", ""),
+                team_abbr=team.get("team", {}).get("abbreviation", ""),
                 home=True if (k == "home") else False,
                 fgm=team.get("fgm", ""),
                 fga=team.get("fga", ""),
@@ -245,7 +245,7 @@ class nbaDB:
                 largest_lead=team.get("largest_lead", ""),
                 pts=team.get("pts", ""),
                 team=Team(
-                    location=team.get("team", {}).get("long_name", ""),
+                    location=team.get("team", {}).get("location", ""),
                     name=team.get("team", {}).get("name", ""),
                     abbr=team.get("team", {}).get("abbreviation", ""),
                 ),

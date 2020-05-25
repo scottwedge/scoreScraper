@@ -8,7 +8,10 @@ if __name__ == "__main__":
     settings = get_project_settings()
     settings["COOKIES_ENABLED"] = False
     settings["DOWNLOAD_DELAY"] = 1
-    settings["ITEM_PIPELINES"] = {"game_crawler.pipelines.JsonWriterPipeline": 100}
+    settings["ITEM_PIPELINES"] = {
+        "game_crawler.pipelines.JsonWriterPipeline": 100,
+        "game_crawler.pipelines.DBWriterPipeline": 100,
+    }
 
     process = CrawlerProcess(settings)
 

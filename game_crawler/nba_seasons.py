@@ -7,10 +7,16 @@ class Seasons:
     season_info = {
         "01-02": {
             "regular_season_start": datetime(2001, 10, 30),
-            "regular_season_end": datetime(2002, 4, 17),
+            "regular_season_end": datetime(2001, 11, 1),
             "post_season_start": datetime(2002, 4, 20),
-            "post_season_end": datetime(2002, 6, 12),
+            "post_season_end": datetime(2002, 4, 22),
         },
+        # "01-02": {
+        #     "regular_season_start": datetime(2001, 10, 30),
+        #     "regular_season_end": datetime(2002, 4, 17),
+        #     "post_season_start": datetime(2002, 4, 20),
+        #     "post_season_end": datetime(2002, 6, 12),
+        # },
         # "02-03": {
         #     "regular_season_start": datetime(2002, 10, 29),
         #     "regular_season_end": datetime(2003, 4, 16),
