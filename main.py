@@ -2,6 +2,8 @@ from scrapy.utils.project import get_project_settings
 from scrapy.crawler import CrawlerProcess
 from game_crawler.nba_crawler import NBASpider
 
+# TODO read game ids by date in docker volume
+# TODO add flags to specify date range
 
 if __name__ == "__main__":
     print(__name__)

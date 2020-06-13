@@ -13,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import date
+from typing import List
 
 
 Base = declarative_base()
@@ -141,13 +142,36 @@ class nbaDB:
         self.session = Sess()
 
     def add_record(self, record: dict):
+        team_data = record.get("team_stats")
+        player_data = record.get("player_stats")
         g = self.map_to_db(record)
+        ps = self.map_player_stats(
+            player_data,
+            team_data.get("home_stats", {}).get("team", {}).get("abbreviation", ""),
+            team_data.get("away_stats", {}).get("team", {}).get("abbreviation", ""),
+        )
+        ts = self.map_team_stats(team_data)
+
+        players = self.map_players(player_data)
+        teams = self.map_teams(team_data)
+
+        for p in players:
+            instance = self.session.query(Player).filter(Player.id == p.id).first()
+            if not instance:
+                self.session.add(p)
+
+        for t in teams:
+            instance = self.session.query(Team).filter(Team.abbr == t.abbr).first()
+            if not instance:
+                self.session.add(t)
+
+        g.team_stats = ts
+        g.player_stats = ps
+
         self.session.add(g)
 
     def map_to_db(self, item: dict) -> Game:
         game_data = item.get("game")
-        player_data = item.get("player_stats")
-        team_data = item.get("team_stats")
         game = Game(
             id=game_data.get("game_id", ""),
             date=game_data.get("date", ""),
@@ -164,24 +188,18 @@ class nbaDB:
             spread=game_data.get("line", {}).get("spread", ""),
         )
 
-        game.player_stats = self.map_player_stats(
-            player_data,
-            team_data.get("home_stats", {}).get("team", {}).get("abbreviation", ""),
-            team_data.get("away_stats", {}).get("team", {}).get("abbreviation", ""),
-        )
-        game.team_stats = self.map_team_stats(team_data)
-
         return game
 
     @staticmethod
-    def map_player_stats(player_data, home_pk, away_pk):
+    def map_player_stats(player_data, home_pk, away_pk) -> List[PlayerStat]:
+        pk_map = {"home_stats": home_pk, "away_stats": away_pk}
         player_db_list = []
         for k in player_data.keys():
             for ps in player_data[k]:
                 stat = PlayerStat(
                     player_id=ps.get("player", "")["player_id"],
                     game_id=ps.get("game_id", ""),
-                    team_abbr=home_pk,
+                    team_abbr=pk_map[k],
                     minutes=ps.get("min", ""),
                     points=ps.get("pts", ""),
                     drebs=ps.get("dreb", ""),
@@ -201,18 +219,12 @@ class nbaDB:
                     steals=ps.get("stl", ""),
                     fouls=ps.get("pf", ""),
                     plus_minus=ps.get("plusminus", ""),
-                    player=Player(
-                        id=ps.get("player", {}).get("player_id", ""),
-                        first_name=ps.get("player", {}).get("first_name", ""),
-                        last_name=ps.get("player", {}).get("last_name", ""),
-                        position=ps.get("player", {}).get("position", ""),
-                    ),
                 )
                 player_db_list.append(stat)
         return player_db_list
 
     @staticmethod
-    def map_team_stats(team_data):
+    def map_team_stats(team_data) -> List[TeamStat]:
         team_db_list = []
         for k in team_data.keys():
             team = team_data[k]
@@ -244,11 +256,33 @@ class nbaDB:
                 flagrant=team.get("flagrant", ""),
                 largest_lead=team.get("largest_lead", ""),
                 pts=team.get("pts", ""),
-                team=Team(
-                    location=team.get("team", {}).get("location", ""),
-                    name=team.get("team", {}).get("name", ""),
-                    abbr=team.get("team", {}).get("abbreviation", ""),
-                ),
             )
             team_db_list.append(team_stat)
         return team_db_list
+
+    @staticmethod
+    def map_players(player_data) -> List[Player]:
+        players = []
+        for k in player_data.keys():
+            for p in player_data[k]:
+                player = Player(
+                    id=p.get("player", {}).get("player_id", ""),
+                    first_name=p.get("player", {}).get("first_name", ""),
+                    last_name=p.get("player", {}).get("last_name", ""),
+                    position=p.get("player", {}).get("position", ""),
+                )
+                players.append(player)
+        return players
+
+    @staticmethod
+    def map_teams(team_data) -> List[Team]:
+        teams = []
+        for k in team_data.keys():
+            t = team_data[k]
+            team = Team(
+                location=t.get("team", {}).get("location", ""),
+                name=t.get("team", {}).get("name", ""),
+                abbr=t.get("team", {}).get("abbreviation", ""),
+            )
+            teams.append(team)
+        return teams
