@@ -29,9 +29,8 @@ class DBWriterPipeline(object):
         if set(self.async_data[gid].keys()) == set(fields):
             self.db.add_record(self.async_data[gid])
             del self.async_data[gid]
-
-        return item
-
+            self.db.session.commit()
+        return f"game{gid} processed"
 
 class JsonWriterPipeline(object):
     def open_spider(self, spider):

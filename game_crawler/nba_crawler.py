@@ -165,7 +165,7 @@ class NBASpider(scrapy.Spider):
         ).re_first(time_re)
 
         bet_info = response.xpath('//div[@class="odds-details"]//li').getall()
-        game_line = self.new_line(bet_info) if bet_info else Line()
+        game_line = self.new_line(bet_info) if bet_info else Line(favorite="n/a", spread=0, ou=0)
 
         game = Game(game_id=game_id)
         game["date"] = game_time
@@ -178,11 +178,17 @@ class NBASpider(scrapy.Spider):
 
     # parse_matchup parses the nba matchup tab and returns team summary statistics
     def parse_teamstats(self, response, game_id):
-        away_team = self.new_team(
-            response.xpath('//div[@class="team away"]//a[@class="team-name"]').get()
-        )
+        fields = TeamStats().fields
+
+        away_html_str = response.xpath('//div[@class="team away"]//a[@class="team-name"]').get()
+        if away_html_str is None:
+            away_html_str = response.xpath('//div[@class="team away"]//div[@class="team-name"]').get()
+        away_team = self.new_team(away_html_str)
+        home_html_str = response.xpath('//div[@class="team home"]//a[@class="team-name"]').get()
+        if home_html_str is None:
+            home_html_str = response.xpath('//div[@class="team home"]//div[@class="team-name"]').get()
         home_team = self.new_team(
-            response.xpath('//div[@class="team home"]//a[@class="team-name"]').get()
+            home_html_str
         )
         away_score = response.xpath(
             '//div[@class="team away"]//div[@class="score-container"]'
@@ -201,11 +207,13 @@ class NBASpider(scrapy.Spider):
         )
 
         stats_dict = self.new_team_stats(team_stat_strings)
+                    # work through stats and set default value if stat not found
 
-        for k, v in stats_dict["home"].items():
-            home_team_stat[k] = v
-        for k, v in stats_dict["away"].items():
-            away_team_stat[k] = v
+        no_default = ["team", "game_id", "home"]
+        for field in fields:
+            if field not in no_default:
+                home_team_stat[field] = stats_dict.get("home").get(field, 0)
+                away_team_stat[field] = stats_dict.get("away").get(field, 0)
 
         team_stats = dict()
         team_stats["home_stats"] = dict(home_team_stat)
@@ -322,13 +330,14 @@ class NBASpider(scrapy.Spider):
             p_stat_kwargs = {"player": dict(player), "game_id": game_id}
 
             # check whether play was a DNP and then pull stats
-            if not re.search(r"DNP", line):
+            if not (re.search(r"DNP", line) or re.search(r"Did not play", line)):
                 # define the regex statements for shooting statistics per line
                 ft_re = re.search(r"\"ft\">(?P<m>[0-9]{1,2})-(?P<a>[0-9]{1,2})", line)
                 x3p_re = re.search(r"\"3pt\">(?P<m>[0-9]{1,2})-(?P<a>[0-9]{1,2})", line)
                 fg_re = re.search(r"\"fg\">(?P<m>[0-9]{1,2})-(?P<a>[0-9]{1,2})", line)
 
                 # parse and calculate shooting fields
+                # import pdb; pdb.set_trace()
                 p_stat_kwargs["fta"] = int(ft_re.group("a"))
                 p_stat_kwargs["ftm"] = int(ft_re.group("m"))
                 if p_stat_kwargs["fta"] != 0:
@@ -384,9 +393,10 @@ class NBASpider(scrapy.Spider):
                 p_stat_kwargs["pf"] = re.search(
                     r"\"pf\">{0,1}([0-9]{1,3})", line
                 ).group(1)
-                p_stat_kwargs["plusminus"] = re.search(
+                pm = re.search(
                     r"\"plusminus\">\+{0,1}([0-9-]{1,3})", line
                 ).group(1)
+                p_stat_kwargs["plusminus"] = pm if (pm != "--") else 0
 
             ps = PlayerStats()
 
@@ -408,7 +418,7 @@ class NBASpider(scrapy.Spider):
     # new_team parses the team html string, including location, full name, and abbreviation
     @staticmethod
     def new_team(html_str: str) -> Team:
-        team_re = r">([A-Za-z]+)<"
+        team_re = r">([A-Za-z0-9 ]+)<"
         out = re.findall(team_re, html_str)
         return Team(location=out[0], name=out[1], abbreviation=out[2],)
 

@@ -70,21 +70,20 @@ class GameDriver:
         return f"game_ids_{date.year}{date.month}{date.day}"
 
     def write_to_file(self, games: dict, date: datetime):
-        if not os.path.exists("game_ids"):
-            os.makedirs("game_ids")
-        with open(os.path.join("game_ids_", f"{self._dt_to_str(date)}.json"), "w") as f:
+        if not os.path.exists("/mnt/game_ids"):
+            os.makedirs("/mnt/game_ids")
+        with open(os.path.join("/mnt/game_ids", f"{self._dt_to_str(date)}.json"), "w") as f:
             json.dump(games, f)
         print(f"wrote game ids for {date} to file")
 
 
 if __name__ == "__main__":
-    game_id_dict = {}
+
     options = Options()
     options.headless = True
     u = "https://www.espn.com/nba/scoreboard/_/date/"
     g_driver = GameDriver(u, options)
     for k in Seasons.season_info.keys():
-        game_id_dict[k] = dict()
         try:
             g_driver.get_games_daterange(
                 Seasons.season_info[k].get("regular_season_start"),
@@ -98,6 +97,5 @@ if __name__ == "__main__":
             print(e)
             print(f"failed to get game_ids for season {k}")
     g_driver.driver.close()
-    with open("game_ids.json", "w") as f:
-        json.dump(game_id_dict, f)
+
     print("wrote game ids to file")
