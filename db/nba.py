@@ -218,7 +218,7 @@ class nbaDB:
         d = d.replace(tzinfo=pytz.utc).astimezone(etz)
         rss = etz.localize(Seasons.season_info[season]["regular_season_start"])
         rse = etz.localize(Seasons.season_info[season]["regular_season_end"])
-        if d > rss and d < rse:
+        if d >= rss and d <= rse:
             return True
         return False
 
