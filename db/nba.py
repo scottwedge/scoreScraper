@@ -208,7 +208,7 @@ class nbaDB:
             pse = etz.localize(
                 v["post_season_end"]
             )  # converts datetime to offset aware to match datetime of game
-            if d > rss and d < pse:
+            if d >= rss and d <= pse:
                 return k
 
     @staticmethod
