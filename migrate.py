@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import create_engine
-import nba
+from db import nba
 
 USER = os.environ["dbName"]
 PASSWORD = os.environ["dbPass"]

@@ -165,7 +165,11 @@ class NBASpider(scrapy.Spider):
         ).re_first(time_re)
 
         bet_info = response.xpath('//div[@class="odds-details"]//li').getall()
-        game_line = self.new_line(bet_info) if bet_info else Line(favorite="n/a", spread=0, ou=0)
+        game_line = (
+            self.new_line(bet_info)
+            if bet_info
+            else Line(favorite="n/a", spread=0, ou=0)
+        )
 
         game = Game(game_id=game_id)
         game["date"] = game_time
@@ -180,16 +184,22 @@ class NBASpider(scrapy.Spider):
     def parse_teamstats(self, response, game_id):
         fields = TeamStats().fields
 
-        away_html_str = response.xpath('//div[@class="team away"]//a[@class="team-name"]').get()
+        away_html_str = response.xpath(
+            '//div[@class="team away"]//a[@class="team-name"]'
+        ).get()
         if away_html_str is None:
-            away_html_str = response.xpath('//div[@class="team away"]//div[@class="team-name"]').get()
+            away_html_str = response.xpath(
+                '//div[@class="team away"]//div[@class="team-name"]'
+            ).get()
         away_team = self.new_team(away_html_str)
-        home_html_str = response.xpath('//div[@class="team home"]//a[@class="team-name"]').get()
+        home_html_str = response.xpath(
+            '//div[@class="team home"]//a[@class="team-name"]'
+        ).get()
         if home_html_str is None:
-            home_html_str = response.xpath('//div[@class="team home"]//div[@class="team-name"]').get()
-        home_team = self.new_team(
-            home_html_str
-        )
+            home_html_str = response.xpath(
+                '//div[@class="team home"]//div[@class="team-name"]'
+            ).get()
+        home_team = self.new_team(home_html_str)
         away_score = response.xpath(
             '//div[@class="team away"]//div[@class="score-container"]'
         ).re_first(r"[0-9]{2,3}")
@@ -207,7 +217,7 @@ class NBASpider(scrapy.Spider):
         )
 
         stats_dict = self.new_team_stats(team_stat_strings)
-                    # work through stats and set default value if stat not found
+        # work through stats and set default value if stat not found
 
         no_default = ["team", "game_id", "home"]
         for field in fields:
@@ -393,9 +403,7 @@ class NBASpider(scrapy.Spider):
                 p_stat_kwargs["pf"] = re.search(
                     r"\"pf\">{0,1}([0-9]{1,3})", line
                 ).group(1)
-                pm = re.search(
-                    r"\"plusminus\">\+{0,1}([0-9-]{1,3})", line
-                ).group(1)
+                pm = re.search(r"\"plusminus\">\+{0,1}([0-9-]{1,3})", line).group(1)
                 p_stat_kwargs["plusminus"] = pm if (pm != "--") else 0
 
             ps = PlayerStats()

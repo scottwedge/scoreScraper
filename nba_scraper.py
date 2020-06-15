@@ -3,11 +3,13 @@ from scrapy.crawler import CrawlerProcess
 from game_crawler.nba_crawler import NBASpider
 import os
 import json
+
 # TODO read game ids by date in docker volume
 # TODO add flags to specify date range
 
+
 def get_ids():
-    fp = '/c/Users/ainig/Desktop/gameid_data/game_ids2'
+    fp = "/c/Users/ainig/Desktop/gameid_data/game_ids2"
     files = os.listdir(fp)
 
     ids = []
@@ -17,6 +19,7 @@ def get_ids():
             with open(os.path.join(fp, f)) as js:
                 ids.extend(json.load(js))
     return ids
+
 
 if __name__ == "__main__":
     ids = get_ids()
@@ -31,5 +34,5 @@ if __name__ == "__main__":
 
     process = CrawlerProcess(settings)
 
-    process.crawl(NBASpider, ids = ids)
+    process.crawl(NBASpider, ids=ids)
     process.start()

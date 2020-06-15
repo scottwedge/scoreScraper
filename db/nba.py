@@ -12,7 +12,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from datetime import date
+from game_crawler.nba_seasons import Seasons
+from datetime import datetime
+import pytz
 from typing import List
 
 
@@ -24,6 +26,7 @@ class Game(Base):
 
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
+    season = Column(String)
     regular_season = Column(Boolean)
     home_wins = Column(Integer)
     home_losses = Column(Integer)
@@ -172,9 +175,13 @@ class nbaDB:
 
     def map_to_db(self, item: dict) -> Game:
         game_data = item.get("game")
+        s = self.get_season(game_data.get("date", ""))
+        rs = self.regular_season(game_data.get("date", ""), s)
         game = Game(
             id=game_data.get("game_id", ""),
             date=game_data.get("date", ""),
+            season=s,
+            regular_season=rs,
             home_wins=game_data.get("home_record", {}).get("wins", ""),
             home_losses=game_data.get("home_record", {}).get("losses", ""),
             home_home_wins=game_data.get("home_home_record", {}).get("wins", ""),
@@ -187,8 +194,33 @@ class nbaDB:
             favorite=game_data.get("line", {}).get("favorite", ""),
             spread=game_data.get("line", {}).get("spread", ""),
         )
-
         return game
+
+    @staticmethod
+    def get_season(date: str) -> String:
+        etz = pytz.timezone("US/Eastern")
+        d = datetime.strptime(date, "%Y-%m-%dT%H:%M%z")
+        d = d.replace(tzinfo=pytz.utc).astimezone(etz)
+        for k, v in Seasons.season_info.items():
+            rss = etz.localize(
+                v["regular_season_start"]
+            )  # converts datetime to offset aware to match datetime of game
+            pse = etz.localize(
+                v["post_season_end"]
+            )  # converts datetime to offset aware to match datetime of game
+            if d > rss and d < pse:
+                return k
+
+    @staticmethod
+    def regular_season(date: str, season: str) -> Boolean:
+        etz = pytz.timezone("US/Eastern")
+        d = datetime.strptime(date, "%Y-%m-%dT%H:%M%z")
+        d = d.replace(tzinfo=pytz.utc).astimezone(etz)
+        rss = etz.localize(Seasons.season_info[season]["regular_season_start"])
+        rse = etz.localize(Seasons.season_info[season]["regular_season_end"])
+        if d > rss and d < rse:
+            return True
+        return False
 
     @staticmethod
     def map_player_stats(player_data, home_pk, away_pk) -> List[PlayerStat]:

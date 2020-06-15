@@ -108,9 +108,9 @@ class Seasons:
             "post_season_end": datetime(2018, 6, 8),
         },
         "18-19": {
-            "regular_season_start": datetime(2016, 10, 16),
-            "regular_season_end": datetime(2017, 4, 10),
-            "post_season_start": datetime(2017, 4, 13),
-            "post_season_end": datetime(2017, 6, 13),
+            "regular_season_start": datetime(2018, 10, 16),
+            "regular_season_end": datetime(2019, 4, 10),
+            "post_season_start": datetime(2019, 4, 13),
+            "post_season_end": datetime(2019, 6, 13),
         },
     }

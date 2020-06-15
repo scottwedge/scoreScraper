@@ -72,7 +72,9 @@ class GameDriver:
     def write_to_file(self, games: dict, date: datetime):
         if not os.path.exists("/mnt/game_ids"):
             os.makedirs("/mnt/game_ids")
-        with open(os.path.join("/mnt/game_ids", f"{self._dt_to_str(date)}.json"), "w") as f:
+        with open(
+            os.path.join("/mnt/game_ids", f"{self._dt_to_str(date)}.json"), "w"
+        ) as f:
             json.dump(games, f)
         print(f"wrote game ids for {date} to file")
 

@@ -32,6 +32,7 @@ class DBWriterPipeline(object):
             self.db.session.commit()
         return f"game{gid} processed"
 
+
 class JsonWriterPipeline(object):
     def open_spider(self, spider):
         self.file = open("items.json", "w")
