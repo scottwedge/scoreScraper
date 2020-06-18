@@ -192,6 +192,7 @@ class NBASpider(scrapy.Spider):
                 '//div[@class="team away"]//div[@class="team-name"]'
             ).get()
         away_team = self.new_team(away_html_str)
+
         home_html_str = response.xpath(
             '//div[@class="team home"]//a[@class="team-name"]'
         ).get()
@@ -200,6 +201,7 @@ class NBASpider(scrapy.Spider):
                 '//div[@class="team home"]//div[@class="team-name"]'
             ).get()
         home_team = self.new_team(home_html_str)
+
         away_score = response.xpath(
             '//div[@class="team away"]//div[@class="score-container"]'
         ).re_first(r"[0-9]{2,3}")
@@ -219,7 +221,7 @@ class NBASpider(scrapy.Spider):
         stats_dict = self.new_team_stats(team_stat_strings)
         # work through stats and set default value if stat not found
 
-        no_default = ["team", "game_id", "home"]
+        no_default = ["team", "game_id", "home", "pts"]
         for field in fields:
             if field not in no_default:
                 home_team_stat[field] = stats_dict.get("home").get(field, 0)
@@ -283,8 +285,8 @@ class NBASpider(scrapy.Spider):
         ]
 
         stat_re = r"data-stat-attr.*\"(?P<stat>[a-zA-Z-]*)\".*>(?P<away>[0-9-]+).*>(?P<home>[0-9-]+)"
-
         combined_stat_dict = {"home": dict(), "away": dict()}
+
         for s in team_stat:
             # remove whitespace characters so regex works
             s = re.sub(r"[\s]", "", s)

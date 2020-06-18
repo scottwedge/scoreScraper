@@ -52,7 +52,7 @@ if __name__ == "__main__":
         "game_crawler.pipelines.DBWriterPipeline": 100,
     }
     settings["AUTOTHROTTLE_ENABLED"] = True
-    settings["AUTHROTTLE_TARGET_CONCURRENCY"] = 1
+    settings["AUTHROTTLE_TARGET_CONCURRENCY"] = 3
 
     process = CrawlerProcess(settings)
     process.crawl(NBASpider, ids=ids)
