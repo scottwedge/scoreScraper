@@ -139,7 +139,7 @@ class PlayerStat(Base):
 class nbaDB:
     def __init__(self, user, password):
         self.engine = create_engine(
-            f"postgresql://{user}:{password}@localhost:5432/nba_stats", echo=True
+            f"postgresql://{user}:{password}@localhost:5432/nba_stats", echo=False
         )
         Sess = sessionmaker(bind=self.engine)
         self.session = Sess()
@@ -173,6 +173,10 @@ class nbaDB:
 
         self.session.add(g)
 
+    def __del__(self):
+        self.session.close()
+        print("nbaDB connection closed")
+
     def map_to_db(self, item: dict) -> Game:
         game_data = item.get("game")
         s = self.get_season(game_data.get("date", ""))
@@ -200,7 +204,7 @@ class nbaDB:
     def get_season(date: str) -> String:
         etz = pytz.timezone("US/Eastern")
         d = datetime.strptime(date, "%Y-%m-%dT%H:%M%z")
-        d = d.replace(tzinfo=pytz.utc).astimezone(etz)
+        d = d.replace(tzinfo=pytz.utc).astimezone(etz).date()
         for k, v in Seasons.season_info.items():
             rss = etz.localize(
                 v["regular_season_start"]
@@ -208,7 +212,7 @@ class nbaDB:
             pse = etz.localize(
                 v["post_season_end"]
             )  # converts datetime to offset aware to match datetime of game
-            if d >= rss and d <= pse:
+            if d >= rss.date() and d <= pse.date():
                 return k
 
     @staticmethod
