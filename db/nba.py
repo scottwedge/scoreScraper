@@ -188,15 +188,15 @@ class nbaDB:
             regular_season=rs,
             home_wins=game_data.get("home_record", {}).get("wins", ""),
             home_losses=game_data.get("home_record", {}).get("losses", ""),
-            home_home_wins=game_data.get("home_home_record", {}).get("wins", ""),
-            home_home_losses=game_data.get("home_home_record", {}).get("losses", ""),
+            home_home_wins=game_data.get("home_home_record", {}).get("wins"),
+            home_home_losses=game_data.get("home_home_record", {}).get("losses"),
             away_wins=game_data.get("away_record", {}).get("wins", ""),
             away_losses=game_data.get("away_record", {}).get("losses", ""),
-            away_away_wins=game_data.get("away_away_record", {}).get("wins", ""),
-            away_away_losses=game_data.get("away_away_record", {}).get("losses", ""),
-            over_under=game_data.get("line", {}).get("ou", ""),
-            favorite=game_data.get("line", {}).get("favorite", ""),
-            spread=game_data.get("line", {}).get("spread", ""),
+            away_away_wins=game_data.get("away_away_record", {}).get("wins"),
+            away_away_losses=game_data.get("away_away_record", {}).get("losses"),
+            over_under=game_data.get("line", {}).get("ou"),
+            favorite=game_data.get("line", {}).get("favorite"),
+            spread=game_data.get("line", {}).get("spread"),
         )
         return game
 

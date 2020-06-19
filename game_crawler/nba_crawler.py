@@ -424,8 +424,10 @@ class NBASpider(scrapy.Spider):
     # new_record splits the record string and returns a Record object.
     @staticmethod
     def new_record(record: str) -> Record:
-        r = record.split("-")
-        return Record(losses=r[0], wins=r[1])
+        if record is not None:
+            r = record.split("-")
+            return Record(losses=r[0], wins=r[1])
+        return Record()
 
     # new_team parses the team html string, including location, full name, and abbreviation
     @staticmethod
@@ -436,12 +438,33 @@ class NBASpider(scrapy.Spider):
 
     # new_line returns the over/under and spread information for a game
     @staticmethod
-    def new_line(html_list: str) -> Line:
-        line_re = r"([A-Z]{3} [0-9-.]+)"
+    def new_line(html_list: List[str]) -> Line:
+        even_re = r"EVEN"
+        line_re = r"([A-Z]{2,3} [0-9-.]+)"
         ou_re = r"([0-9]{2,3})"
-        line = re.search(line_re, html_list[0])
-        ou = re.search(ou_re, html_list[1])
-        line_split = line.group(0).split()
+        line_fav = None
+        spread = None
+        o = None
+        for l in html_list:
+            if re.search("Line", l):
+                if re.search(even_re, l):
+                    line_fav = "EVEN"
+                    spread = 0
+                else:
+                    line = re.search(line_re, l)
+                    if line is None:
+                        line_fav = None
+                        spread = None
+                    else:
+                        line_split = line.group(0).split()
+                        line_fav = line_split[0]
+                        spread = float(line_split[1])
+            elif re.search("Over/Under", l):
+                ou = re.search(ou_re, l)
+                if ou is None:
+                    o = None
+                else:
+                    o = int(ou.group(0))
         return Line(
-            favorite=line_split[0], spread=float(line_split[1]), ou=int(ou.group(0))
+            favorite=line_fav, spread=spread, ou=o
         )
