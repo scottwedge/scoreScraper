@@ -23,8 +23,6 @@ class Line(scrapy.Item):
 class Team(scrapy.Item):
     location = scrapy.Field()
     name = scrapy.Field()
-    abbreviation = scrapy.Field()
-
 
 class TeamStats(scrapy.Item):
     team = scrapy.Field()
@@ -47,9 +45,6 @@ class TeamStats(scrapy.Item):
     blk = scrapy.Field()
     to = scrapy.Field()
     pf = scrapy.Field()
-    technical = scrapy.Field()
-    flagrant = scrapy.Field()
-    largest_lead = scrapy.Field()
     pts = scrapy.Field()
     x1q_pts = scrapy.Field()
     x2q_pts = scrapy.Field()
