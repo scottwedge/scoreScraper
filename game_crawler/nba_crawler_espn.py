@@ -4,104 +4,23 @@ from scrapy.utils.project import get_project_settings
 from typing import List, Dict
 import re
 
-
-GAMEID = 401071116
-
-
-class Game(scrapy.Item):
-    game_id = scrapy.Field()
-    date = scrapy.Field()
-    home_record = scrapy.Field()
-    home_home_record = scrapy.Field()
-    away_record = scrapy.Field()
-    away_away_record = scrapy.Field()
-    line = scrapy.Field()
+from game_crawler.nba_fields import (
+    Game, 
+    Record, 
+    Line, 
+    Team, 
+    Player, 
+    PlayerStats, 
+    TeamStats
+)
 
 
-class Record(scrapy.Item):
-    wins = scrapy.Field()
-    losses = scrapy.Field()
 
-
-class Line(scrapy.Item):
-    favorite = scrapy.Field()
-    spread = scrapy.Field()
-    ou = scrapy.Field()
-
-
-class Team(scrapy.Item):
-    location = scrapy.Field()
-    name = scrapy.Field()
-    abbreviation = scrapy.Field()
-
-
-class TeamStats(scrapy.Item):
-    team = scrapy.Field()
-    game_id = scrapy.Field()
-    home = scrapy.Field()
-    fgm = scrapy.Field()
-    fga = scrapy.Field()
-    fg_per = scrapy.Field()
-    x3pa = scrapy.Field()
-    x3pm = scrapy.Field()
-    x3p_per = scrapy.Field()
-    fta = scrapy.Field()
-    ftm = scrapy.Field()
-    ft_per = scrapy.Field()
-    oreb = scrapy.Field()
-    dreb = scrapy.Field()
-    reb = scrapy.Field()
-    ast = scrapy.Field()
-    stl = scrapy.Field()
-    blk = scrapy.Field()
-    to = scrapy.Field()
-    pts_off_to = scrapy.Field()
-    fast_break_pts = scrapy.Field()
-    points_in_paint = scrapy.Field()
-    pf = scrapy.Field()
-    technical = scrapy.Field()
-    flagrant = scrapy.Field()
-    largest_lead = scrapy.Field()
-    pts = scrapy.Field()
-
-
-class Player(scrapy.Item):
-    player_id = scrapy.Field()
-    first_name = scrapy.Field()
-    last_name = scrapy.Field()
-    position = scrapy.Field()
-
-
-class PlayerStats(scrapy.Item):
-    player = scrapy.Field()
-    game_id = scrapy.Field()
-    min = scrapy.Field()
-    fgm = scrapy.Field()
-    fga = scrapy.Field()
-    fg_per = scrapy.Field()
-    x3pa = scrapy.Field()
-    x3pm = scrapy.Field()
-    x3p_per = scrapy.Field()
-    fta = scrapy.Field()
-    ftm = scrapy.Field()
-    ft_per = scrapy.Field()
-    oreb = scrapy.Field()
-    dreb = scrapy.Field()
-    reb = scrapy.Field()
-    ast = scrapy.Field()
-    stl = scrapy.Field()
-    blk = scrapy.Field()
-    to = scrapy.Field()
-    pf = scrapy.Field()
-    plusminus = scrapy.Field()
-    pts = scrapy.Field()
-
-
-class NBASpider(scrapy.Spider):
+class NBAESPNSpider(scrapy.Spider):
     name = "nba_boxscores"
 
     def __init__(self, ids: List[int], *args, **kwargs):
-        super(NBASpider, self).__init__(*args, **kwargs)
+        super(NBAESPNSpider, self).__init__(*args, **kwargs)
         self.game_ids = ids
 
     @staticmethod
