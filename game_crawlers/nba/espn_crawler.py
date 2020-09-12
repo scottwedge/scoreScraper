@@ -4,22 +4,22 @@ from scrapy.utils.project import get_project_settings
 from typing import List, Dict
 import re
 
-from game_crawler.nba_fields import (
-    Game, 
-    Record, 
-    Line, 
-    Team, 
-    Player, 
-    PlayerStats, 
-    TeamStats
+from game_crawler.nba.fields import (
+    Game,
+    Record,
+    Line,
+    Team,
+    Player,
+    PlayerStats,
+    TeamStats,
 )
 
 
-class NBABBRefSpider(scrapy.Spider):
+class NBAESPNSpider(scrapy.Spider):
     name = "nba_boxscores"
 
     def __init__(self, ids: List[int], *args, **kwargs):
-        super(NBABBRefSpider, self).__init__(*args, **kwargs)
+        super(NBAESPNSpider, self).__init__(*args, **kwargs)
         self.game_ids = ids
 
     @staticmethod
@@ -383,6 +383,4 @@ class NBABBRefSpider(scrapy.Spider):
                     o = None
                 else:
                     o = int(ou.group(0))
-        return Line(
-            favorite=line_fav, spread=spread, ou=o
-        )
+        return Line(favorite=line_fav, spread=spread, ou=o)

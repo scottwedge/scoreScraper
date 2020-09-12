@@ -1,0 +1,25 @@
+- Get Game Ids -> url https://www.basketball-reference.com/boxscores/?month=XX&day=XX&year=XXXX
+    - <p class="links"> <a href = "/boxscores/YYYYMMDDTTT.html">
+
+- loop through dates
+- loop through game summaries
+- open boxscores
+- Pull scoring
+- Pull Four Factors
+- Pull Player Stats
+
+
+- Need to subtract 1win from winning team 1loss from winning/losing team each game
+
+
+{
+    game_information: Game(),
+    team_stats: {
+        home_team_stats = TeamStats(),
+        away_team_stats = TeamStats()
+    },
+    player_stats: {
+        home_player_stats = [PlayerStats],
+        away_player_stats = [PlayerStats]
+    }
+}

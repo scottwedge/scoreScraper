@@ -1,13 +1,11 @@
-
 import scrapy
+
 
 class Game(scrapy.Item):
     game_id = scrapy.Field()
     date = scrapy.Field()
     home_record = scrapy.Field()
-    home_home_record = scrapy.Field()
     away_record = scrapy.Field()
-    away_away_record = scrapy.Field()
     line = scrapy.Field()
 
 
@@ -58,18 +56,18 @@ class TeamStats(scrapy.Item):
     x3q_pts = scrapy.Field()
     x4q_pts = scrapy.Field()
     ot_pts = scrapy.Field()
-    pace = scrapy.Field() # Four Factor Table
+    pace = scrapy.Field()  # Four Factor Table
     efg_per = scrapy.Field()
-    to_per = scrapy.Field() # Four Factor Table
-    orb_per = scrapy.Field() 
-    ft_per_fga = scrapy.Field() # Four Factor table 
+    to_per = scrapy.Field()  # Four Factor Table
+    orb_per = scrapy.Field()
+    ft_per_fga = scrapy.Field()  # Four Factor table
     off_rating = scrapy.Field()
     ts_per = scrapy.Field()
     x3p_ar = scrapy.Field()
     ft_ar = scrapy.Field()
     oreb_per = scrapy.Field()
     dreb_per = scrapy.Field()
-    reb_per = scrapy.Field()  
+    reb_per = scrapy.Field()
     ast_per = scrapy.Field
     stl_per = scrapy.Field()
     blk_per = scrapy.Field()
@@ -78,6 +76,7 @@ class TeamStats(scrapy.Item):
     off_rating = scrapy.Field()
     def_rating = scrapy.Field()
     bpm = scrapy.Field()
+
 
 class Player(scrapy.Item):
     player_id = scrapy.Field()
@@ -115,7 +114,7 @@ class PlayerStats(scrapy.Item):
     ft_ar = scrapy.Field()
     oreb_per = scrapy.Field()
     dreb_per = scrapy.Field()
-    reb_per = scrapy.Field()  
+    reb_per = scrapy.Field()
     ast_per = scrapy.Field()
     stl_per = scrapy.Field()
     blk_per = scrapy.Field()
@@ -124,4 +123,3 @@ class PlayerStats(scrapy.Item):
     off_rating = scrapy.Field()
     def_rating = scrapy.Field()
     bpm = scrapy.Field()
-

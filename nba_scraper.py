@@ -1,11 +1,15 @@
 from scrapy.utils.project import get_project_settings
 from scrapy.crawler import CrawlerProcess
-from game_crawler.nba_crawler import NBASpider
-from db import nba
 import os
 import json
 import time
 import random
+from datetime import datetime, timedelta
+from typing import List
+
+from game_crawlers.nba.bbref_crawler import BBRefSpider
+from game_crawlers.nba.seasons import Seasons
+from db import nba
 
 # TODO read game ids by date in docker volume
 # TODO add flags to specify date range
@@ -14,7 +18,7 @@ USER = os.environ["dbName"]
 PASSWORD = os.environ["dbPass"]
 
 
-def get_ids():
+def get_espn_ids():
     fp = "/c/Users/ainig/Desktop/gameid_data/game_ids"
     files = os.listdir(fp)
 
@@ -29,7 +33,6 @@ def get_ids():
 
 if __name__ == "__main__":
     print("getting game ids")
-    ids = get_ids()
 
     db = nba.nbaDB(USER, PASSWORD)
 
@@ -55,7 +58,7 @@ if __name__ == "__main__":
     settings["AUTHROTTLE_TARGET_CONCURRENCY"] = 3
 
     process = CrawlerProcess(settings)
-    process.crawl(NBASpider, ids=ids)
+    process.crawl(BBRefSpider, ids=ids)
     print("starting crawler")
     process.start()
     print("crawling completed")
