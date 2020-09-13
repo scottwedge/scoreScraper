@@ -23,3 +23,10 @@
         away_player_stats = [PlayerStats]
     }
 }
+
+
+### NEXT STEPS
+- Continue doing team parsing
+- move to player parsing
+- update scrapy pipeline
+- update pipeline -> DB mapping

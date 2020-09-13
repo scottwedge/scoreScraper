@@ -112,7 +112,7 @@ class BBRefSpider(Spider):
         away = re.search(r'teams/(?P<abbr>[A-Z]{3}).*>(?P<name>[A-Za-z ]+)<', team_information[0])
         home = re.search(r'teams/(?P<abbr>[A-Z]{3}).*>(?P<name>[A-Za-z ]+)<', team_information[1])
 
-        away_team = Team( name = away.group("name"), abbreviation = away.group("abbr"))
+        away_team = Team(name = away.group("name"), abbreviation = away.group("abbr"))
         home_team = Team(name = home.group("name"), abbreviation = home.group("abbr"))
 
         away_stats = self.parse_team_stats(response, away.group("abbr"))
@@ -124,8 +124,17 @@ class BBRefSpider(Spider):
         return {"home_stats": dict(home_stat_obj), "away_stats": dict(away_stat_obj)}
     
 
-    def get_player_stats(self, response):
-        pass
+    def get_player_stats(self, response, game_id):
+        return {}
+
+
+    def parse_player_stats(self, response, team_abbr: str):
+        # xpath is dynamically named after the teams abbreviation, so that needs to get passed into the 
+        # function so that we can accurately pull statistics. Player stats are found in body of table
+        # and xpath will return a list of stats to parse.
+        basic_xpath_str = '//table[@id="box-' + team_abbr + '-game-basic"]//tbody/tr[not(@class="thead")]'
+        advanced_xpath_str = '//table[@id="box-' + team_abbr + '-game-advanced"]//tbody/tr[not(@class="thead")]'
+
 
     def parse_team_stats(self, response, team_abbr: str):
         # xpath is dynamically named after the teams abbreviation, so that needs to get passed into the 
@@ -149,17 +158,10 @@ class BBRefSpider(Spider):
         team_stat_dict = {}
         team_stat_dict.update(self.parse_basic_box(basic_box))
         team_stat_dict.update(self.parse_advanced_box(advanced_box))
-        team_stat_dict.update(self.parse_four_factor(four_factor))
-        team_stat_dict.update(self.parse_scoreline(scoreline)) 
+        team_stat_dict.update(self.parse_four_factor(four_factor, team_abbr))
+        team_stat_dict.update(self.parse_scoreline(scoreline, team_abbr)) 
 
-        return {}
-
-    def parse_player_stats(self, response, team_abbr: str):
-        # xpath is dynamically named after the teams abbreviation, so that needs to get passed into the 
-        # function so that we can accurately pull statistics. Player stats are found in body of table
-        # and xpath will return a list of stats to parse.
-        basic_xpath_str = '//table[@id="box-' + team_abbr + '-game-basic"]//tbody/tr[not(@class="thead")]'
-        advanced_xpath_str = '//table[@id="box-' + team_abbr + '-game-advanced"]//tbody/tr[not(@class="thead")]'
+        return team_stat_dict
 
     def parse_basic_box(self, basic_box: List[str]) -> dict:
         # basic_box is a list of cells from the basic box score table
@@ -223,12 +225,84 @@ class BBRefSpider(Spider):
         return stats
 
     @staticmethod
-    def parse_four_factor(four_factor: str) -> dict:
-        return {}
+    def parse_four_factor(four_factor: str, abbr: str) -> dict:
+        # map for stats in the four factor group to map to scrapy fields
+        bbref_to_teamstat_map = {
+            "pace": "pace",
+            "ft_rate": "ft_per_fga"
+        }
+        # FourFactor is a string comment from the html that contains all the stats since the html 
+        # table can't be found via xpath. Below regex path will pull the four factor stats for the
+        # given team. 
+        # Sample string: 
+        #     'NJN</a></th><td class="right " data-stat="pace" >93.2</td><td class="right minus" 
+        #     data-stat="efg_pct" >.395</td><td class="right plus" data-stat="tov_pct" >13.8</td>
+        #     <td class="right minus" data-stat="orb_pct" >12.5</td><td class="right plus" data-stat="ft_rate" >
+        #     .224</td><td class="right " data-stat="off_rtg" >82.6</td></tr><tr ><th scope="row" class="left " 
+        #     data-stat="team_id" >'
+        clean_str = four_factor.replace("/n", "")
+        re_str = abbr + r'<.+(?=\<a)|' + abbr + r'<.+(?=</tr)'
+        snippet = re.search(re_str, clean_str)
+
+        # Given the snippet, this will return a list of tuples [(stat, value)] with the stat values
+        # returns:
+        #   [('pace', '93.2'),
+        #  ('efg_pct', '.395'),
+        #  ('tov_pct', '13.8'),
+        #  ('orb_pct', '12.5'),
+        #  ('ft_rate', '.224'),
+        #  ('off_rtg', '82.6')]
+
+        stats = re.findall(r'data-stat=\"(?P<stat>[A-Za-z0-9_]+)\" >(?P<val>[0-9.]+)<', snippet.group())
+        stat_dict = dict()
+        for stat in stats:
+            if stat[0] in bbref_to_teamstat_map.keys():
+                stat_dict[bbref_to_teamstat_map.get(stat[0])] = stat[1]
+        return stat_dict
     
     @staticmethod
-    def parse_scoreline(scoreline: str) -> dict:
-        return {}
+    def parse_scoreline(scoreline: str, abbr: str) -> dict:
+        # map for stats in the four factor group to map to scrapy fields
+        bbref_to_teamstat_map = {
+            "1": "x1q_pts",
+            "2": "x2q_pts",
+            "3": "x3q_pts",
+            "4": "x4q_pts"
+        }
+        
+        ot_match = r'[0-9]OT'
+        # scoreline is a string comment from the html that contains all the stats since the html 
+        # table can't be found via xpath. Below regex path will pull the four factor stats for the
+        # given team. 
+        # Sample string: 
+        #     'NJN</a></th><td class="right " data-stat="pace" >93.2</td><td class="right minus" 
+        #     data-stat="efg_pct" >.395</td><td class="right plus" data-stat="tov_pct" >13.8</td>
+        #     <td class="right minus" data-stat="orb_pct" >12.5</td><td class="right plus" data-stat="ft_rate" >
+        #     .224</td><td class="right " data-stat="off_rtg" >82.6</td></tr><tr ><th scope="row" class="left " 
+        #     data-stat="team_id" >'
+        clean_str = scoreline.replace("/n", "")
+        re_str = abbr + r'<.+(?=<a)|' + abbr + r'<.+(?=</tr)'
+        snippet = re.search(re_str, clean_str)
+
+        # Given the snippet, this will return a list of tuples [(stat, value)] with the stat values
+        # returns:
+        #   [('1', '25'),
+        #  ('2', '25'),
+        #  ('3', '25'),
+        #  ('4', '25'),
+        #  ('1OT', '25'),
+        #  ('T', '125')]
+
+        stats = re.findall(r'data-stat=\"(?P<stat>[A-Za-z0-9_]+)\" >(?P<val>[0-9.]+)<', snippet.group())
+        stat_dict = dict()
+        stat_dict["ot_pts"] = 0
+        for stat in stats:
+            if stat[0] in bbref_to_teamstat_map.keys():
+                stat_dict[bbref_to_teamstat_map.get(stat[0])] = stat[1]
+            elif re.match(ot_match, stat[0]):
+                stat_dict["ot_pts"] += int(stat[1])
+        stat_dict["ot_pts"] = str(stat_dict["ot_pts"])
+        return stat_dict
 
     @staticmethod
     def get_away_home_records(record_string: List[str], scores: List[int]):

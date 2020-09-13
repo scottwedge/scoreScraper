@@ -4,7 +4,7 @@ from scrapy.utils.project import get_project_settings
 from typing import List, Dict
 import re
 
-from game_crawler.nba.fields import (
+from game_crawlers.nba.fields import (
     Game,
     Record,
     Line,
