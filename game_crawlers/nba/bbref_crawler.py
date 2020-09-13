@@ -118,10 +118,10 @@ class BBRefSpider(Spider):
         away_stats = self.parse_team_stats(response, away.group("abbr"))
         home_stats = self.parse_team_stats(response, home.group("abbr"))
 
-        away_stat_obj = TeamStats(team = dict(away_team), game_id = game_id)
-        home_stat_obj = TeamStats(team = dict(home_team), game_id = game_id)
+        away_stat_obj = TeamStats(team = dict(away_team), game_id = game_id, home = False, **away_stats)
+        home_stat_obj = TeamStats(team = dict(home_team), game_id = game_id, home = True, **home_stats)
 
-        return {"home_stats": dict(home_team_stats), "away_stats": dict(away_team_stats)}
+        return {"home_stats": dict(home_stat_obj), "away_stats": dict(away_stat_obj)}
     
 
     def get_player_stats(self, response):
@@ -152,7 +152,7 @@ class BBRefSpider(Spider):
         team_stat_dict.update(self.parse_four_factor(four_factor))
         team_stat_dict.update(self.parse_scoreline(scoreline)) 
 
-        return 
+        return {}
 
     def parse_player_stats(self, response, team_abbr: str):
         # xpath is dynamically named after the teams abbreviation, so that needs to get passed into the 
@@ -161,13 +161,66 @@ class BBRefSpider(Spider):
         basic_xpath_str = '//table[@id="box-' + team_abbr + '-game-basic"]//tbody/tr[not(@class="thead")]'
         advanced_xpath_str = '//table[@id="box-' + team_abbr + '-game-advanced"]//tbody/tr[not(@class="thead")]'
 
-    @staticmethod
-    def parse_basic_box(basic_box: str) -> dict:
-        return {}
+    def parse_basic_box(self, basic_box: List[str]) -> dict:
+        # basic_box is a list of cells from the basic box score table
+        # each looks like this '<td class="right " data-stat="mp">240</td>'
+        
+        # maps the field names from basketball reference  basic boxscore to the expected
+        # field name specified in the spacy TeamStats object.
+        bbref_to_teamstat_map = {
+            "fg": "fgm",
+            "fga": "fga",
+            "fg_pct": "fg_per",
+            "fg3": "x3pm",
+            "fg3a": "x3pa",
+            "fg3_pct": "x3p_per",
+            "ft": "ftm",
+            "fta": "fta",
+            "ft_pct": "ft_per",
+            "orb": "oreb",
+            "drb": "dreb",
+            "trb": "reb",
+            "ast": "ast",
+            "stl": "stl",
+            "blk": "blk",
+            "tov": "to",
+            "pf": "pf",
+            "pts": "pts"
+        }
+        return self.parse_team_box(basic_box, bbref_to_teamstat_map)
 
+    def parse_advanced_box(self, advanced_box: str) -> dict:
+        # advanced_box is a list of cells from the advanced box score table
+        # each looks like this '<td class="right " data-stat="mp">240</td>'
+        
+        # maps the field names from basketball reference advanced boxscore to the expected
+        # field name specified in the spacy TeamStats object.
+        bbref_to_teamstat_map = {
+            "ts_pct": "ts_per",
+            "efg_pct": "efg_per",
+            "fg3a_per_fga_pct": "x3p_ar",
+            "fta_per_fga_pct": "ft_ar",
+            "orb_pct": "oreb_per",
+            "drb_pct": "dreb_per", 
+            "trb_pct": "reb_per",
+            "ast_pct": "ast_per",
+            "stl_per": "stl_per",
+            "blk_pct": "blk_per",
+            "tov_pct": "tov_per",
+            "usg_pct": "usg_per",
+            "off_rtg": "off_rating",
+            "def_rtg": "def_rating",
+        }
+        return self.parse_team_box(advanced_box, bbref_to_teamstat_map)
+    
     @staticmethod
-    def parse_advanced_box(advanced_box: str) -> dict:
-        return {}
+    def parse_team_box(table_str: List[str], stat_map: dict) -> dict:
+        stats = {}
+        for stat in table_str:
+            match = re.search(r'data-stat=\"(?P<stat>[A-Za-z0-9_]+)\">(?P<val>[0-9.]+)<', stat)
+            if match.group("stat") in stat_map.keys():
+                stats[stat_map.get(match.group("stat"))] = match.group("val")
+        return stats
 
     @staticmethod
     def parse_four_factor(four_factor: str) -> dict:

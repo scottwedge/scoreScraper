@@ -70,7 +70,6 @@ class TeamStats(scrapy.Item):
     usg_per = scrapy.Field()
     off_rating = scrapy.Field()
     def_rating = scrapy.Field()
-    bpm = scrapy.Field()
 
 
 class Player(scrapy.Item):
