@@ -21,7 +21,7 @@ class BBRefScoreboard:
     """
     Class to pull list of dates that NBA games were played using range for regular and post season
     schedules. Some games may still be empty, but get_scoreboard_urls() will return the urls for 
-    all days where a game possibly occured.
+    all days where a game possibly occurred.
     """
 
     def __init__(self):
